@@ -96,7 +96,7 @@ def _log_attempt(tries, show_traceback, logger, _tries, _delay, e, func_name):
         )
 
     elif tries > 1:
-        logger.exception(
+        logger.error(
             f"{e}, attempt {tries - _tries}/{tries} failed - giving up!"
         )
 
