@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import asyncio
 
 import pytest
-from reretry.api import _is_async, retry, retry_call
+from skretry.api import _is_async, retry, retry_call
 
 
 

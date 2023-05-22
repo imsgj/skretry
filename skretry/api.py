@@ -1,5 +1,5 @@
 import asyncio
-import logging
+from loguru import logger as lg
 import random
 import time
 import traceback
@@ -9,20 +9,20 @@ import inspect
 
 from .compat import decorator
 
-logging_logger = logging.getLogger(__name__)
+logging_logger = lg
 
 
 def __retry_internal(
-    f,
-    exceptions=Exception,
-    tries=-1,
-    delay=0,
-    max_delay=None,
-    backoff=1,
-    jitter=0,
-    show_traceback=False,
-    logger=logging_logger,
-    fail_callback=None,
+        f,
+        exceptions=Exception,
+        tries=-1,
+        delay=0,
+        max_delay=None,
+        backoff=1,
+        jitter=0,
+        show_traceback=False,
+        logger=logging_logger,
+        fail_callback=None,
 ):
     _tries, _delay = tries, delay
 
@@ -34,7 +34,7 @@ def __retry_internal(
             _tries -= 1
 
             if logger:
-                _log_attempt(tries, show_traceback, logger, _tries, _delay, e)
+                _log_attempt(tries, show_traceback, logger, _tries, _delay, e, f.__name__)
 
             if not _tries:
                 raise
@@ -48,16 +48,16 @@ def __retry_internal(
 
 
 async def __retry_internal_async(
-    f,
-    exceptions=Exception,
-    tries=-1,
-    delay=0,
-    max_delay=None,
-    backoff=1,
-    jitter=0,
-    show_traceback=False,
-    logger=logging_logger,
-    fail_callback=None,
+        f,
+        exceptions=Exception,
+        tries=-1,
+        delay=0,
+        max_delay=None,
+        backoff=1,
+        jitter=0,
+        show_traceback=False,
+        logger=logging_logger,
+        fail_callback=None,
 ):
     _tries, _delay = tries, delay
 
@@ -69,7 +69,7 @@ async def __retry_internal_async(
             _tries -= 1
 
             if logger:
-                _log_attempt(tries, show_traceback, logger, _tries, _delay, e)
+                _log_attempt(tries, show_traceback, logger, _tries, _delay, e, f.__name__)
 
             if not _tries:
                 raise
@@ -82,7 +82,10 @@ async def __retry_internal_async(
             _delay = _new_delay(max_delay, backoff, jitter, _delay)
 
 
-def _log_attempt(tries, show_traceback, logger, _tries, _delay, e):
+def _log_attempt(tries, show_traceback, logger, _tries, _delay, e, func_name):
+    logger = logger.opt(depth=5).patch(
+        lambda record: record.update(line=e.__traceback__.tb_next.tb_lineno, function=func_name))
+
     if _tries:
         if show_traceback:
             tb_str = "".join(traceback.format_exception(None, e, e.__traceback__))
@@ -120,21 +123,21 @@ def _check_params(f, show_traceback=False, logger=logging_logger, fail_callback=
     assert not show_traceback or logger is not None, "`show_traceback` needs `logger`"
 
     assert not fail_callback or (
-        (_is_async(f) and _is_async(fail_callback))
-        or (not _is_async(f) and not _is_async(fail_callback))
+            (_is_async(f) and _is_async(fail_callback))
+            or (not _is_async(f) and not _is_async(fail_callback))
     ), "If the retried function is async, fail_callback needs to be async as well or vice versa"
 
 
 def retry(
-    exceptions=Exception,
-    tries=-1,
-    delay=0,
-    max_delay=None,
-    backoff=1,
-    jitter=0,
-    show_traceback=False,
-    logger=logging_logger,
-    fail_callback=None,
+        exceptions=Exception,
+        tries=-1,
+        delay=0,
+        max_delay=None,
+        backoff=1,
+        jitter=0,
+        show_traceback=False,
+        logger=logging_logger,
+        fail_callback=None,
 ):
     """Returns a retry decorator.
 
@@ -173,18 +176,18 @@ def retry(
 
 
 def retry_call(
-    f,
-    fargs=None,
-    fkwargs=None,
-    exceptions=Exception,
-    tries=-1,
-    delay=0,
-    max_delay=None,
-    backoff=1,
-    jitter=0,
-    show_traceback=False,
-    logger=logging_logger,
-    fail_callback=None,
+        f,
+        fargs=None,
+        fkwargs=None,
+        exceptions=Exception,
+        tries=-1,
+        delay=0,
+        max_delay=None,
+        backoff=1,
+        jitter=0,
+        show_traceback=False,
+        logger=logging_logger,
+        fail_callback=None,
 ):
     """
     Calls a function and re-executes it if it failed.
@@ -209,10 +212,12 @@ def retry_call(
     kwargs = fkwargs or dict()
 
     _check_params(f, show_traceback, logger, fail_callback)
-
     func = _get_internal_function(f)
+    p = partial(f, *args, **kwargs)
+    p.__name__ = f.__name__
+
     return func(
-        partial(f, *args, **kwargs),
+        p,
         exceptions,
         tries,
         delay,

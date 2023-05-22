@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import time
 
 import pytest
-from reretry.api import retry, retry_call
+from skretry.api import retry, retry_call
 
 
 def test_retry(monkeypatch):
