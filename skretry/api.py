@@ -85,7 +85,7 @@ async def __retry_internal_async(
 def _log_attempt(tries, show_traceback, logger, _tries, _delay, e, func_name):
     logger = logger.opt(depth=5).patch(
         lambda record: record.update(line=e.__traceback__.tb_next.tb_lineno, function=func_name))
-
+    traceback.print_exc()
     if _tries:
         if show_traceback:
             tb_str = "".join(traceback.format_exception(None, e, e.__traceback__))
